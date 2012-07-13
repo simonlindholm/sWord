@@ -1,25 +1,28 @@
+body {
+	-moz-user-select: none;
+	cursor: default;
+}
+
 #game {
 	position: relative;
 	width: 480px;
-	height: 500px;
+	height: 450px;
 }
-#header {
+/* #header {
 	position: absolute;
 	background-color: white;
 	z-index: 3;
 	width: 100%;
 	height: 20px;
-}
+}*/
 #overlay {
 	position: absolute;
 	z-index: 2;
-	top: 20px;
 }
 #field {
 	position: absolute;
 	background-color: white;
 	z-index: 1;
-	top: 20px;
 	width: 100%;
 	height: 400px;
 }
@@ -27,9 +30,8 @@
 	position: absolute;
 	background-color: white;
 	z-index: 4;
-	bottom: 0px;
+	top: 400px;
 	width: 100%;
-	height: 80px;
 }
 #covermsg {
 	position: absolute;
@@ -39,22 +41,27 @@
 	background: rgba(0, 0, 0, 0.5);
 }
 
-#ptable td {
+#inv .tileholder {
+	display: inline-block;
 	margin: 3px 6px 2px 1px;
 }
-#ptable td div {
-	height: 20px;
-	width: 20px;
-	text-align: bottom;
-	font-size: 20px;
+.havetile {
+	height: 25px;
+	line-height: 25px;
+	font-size: 19px;
+	padding-right: 1px;
 	border: 1px solid black;
 	border-radius: 3px;
 }
-#ptable .points {
-	position: absolute;
-	right: 2px;
-	top: 2px;
+.havetile > div {
+	display: inline-block;
+	width: 17px;
+	text-align: center;
+}
+#inv .points {
+	line-height: 10px;
 	font-size: 11px;
+	vertical-align: super;
 }
 
 #signmsg {
@@ -63,10 +70,82 @@
 	width: 50%;
 	margin: 90px auto 0;
 	padding: 30px 20px 25px;
-	text-align: middle;
+	text-align: center;
 }
 
 .enemy {
+	position: absolute;
+	z-index: 2;
 }
-.enemy-still {
+.enemy-me {
+	margin-top: 1px;
+	z-index: 1;
+}
+.enemy-me > img[data-facing="-10"] { /*up*/
+	margin-left: 2px;
+}
+.enemy-me > img[data-facing="10"] { /*down*/
+	margin-left: 3px;
+}
+.enemy-me > img[data-facing="0-1"] { /*left*/
+	margin-top: 1px;
+}
+.enemy-tile, .enemy-message {
+	background-color: white;
+	border: 1px solid black;
+	padding: 2px;
+	font-size: 18px;
+	border-radius: 3px;
+	margin: 4px 0 0 5px;
+	width: 27px;
+	height: 26px;
+	text-align: center;
+	line-height: 26px;
+	font-family: sans-serif;
+}
+.enemy-message {
+	height: 20px;
+	width: 21px;
+	line-height: 20px;
+	font-size: 15px;
+}
+
+#bgcont {
+	border-collapse: collapse;
+}
+.bgtile {
+	border: 1px solid black;
+	width: 39px;
+	height: 39px;
+	padding: 0;
+}
+.tile-0, .tile-bg, .tile-S, .tile-T {
+	background: #EEFF00; /*url(img/bg.png)*/
+}
+.tile-E {
+	background: #DD8800;
+}
+.tile-wall {
+	background-color: black;
+}
+.tile-0 span {
+	position: relative;
+	display: block;
+	height: 38px;
+}
+.tile-0 span span {
+	position: absolute;
+	width: auto;
+	height: auto;
+	top: 2px;
+	bottom: 2px;
+	left: 2px;
+	right: 2px;
+	background-color: blue;
+	border: 1px solid black;
+	border-radius: 3px;
+	font-size: 28px;
+	line-height: 32px;
+	text-align: center;
+	font-family: Helvetica;
 }
