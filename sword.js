@@ -112,6 +112,8 @@ function Enemy(type, pos, move) {
 		this.hitbox = {x: 3, y: 3, w: 33, h: 33};
 	else if (type === 'message')
 		this.hitbox = {x: 4, y: 4, w: 12, h: 12};
+	else if (type === 'end')
+		this.hitbox = {x: 4, y: 4, w: 31, h: 31};
 }
 
 function sq(x) { return x*x; }
@@ -273,7 +275,7 @@ function keyPress(e) {
 	var cc = e.charCode;
 	if (cc >= 97 && cc < 97+26) cc -= 32;
 	var k = String.fromCharCode(cc);
-	if (playState < 2 && k === '\n') {
+	if (playState < 2 && e.keyCode === 13) {
 		// Restart
 		destroyLevel();
 		loadLevel(level);
@@ -286,7 +288,7 @@ function keyPress(e) {
 			}
 		}
 		else {
-			if (k === '\n') {
+			if (e.keyCode === 13) {
 				for (var i = 0; i < signAreas.length; ++i) {
 					var s = signAreas[i];
 					if (within(s, myPosition)) {
@@ -308,7 +310,7 @@ function keyPress(e) {
 	else if (playState === 2) {
 		if (k === ' ') {
 			destroyLevel();
-			loadLevel(level+1);
+			loadLevel(level+1===Levels.length ? 0 : level+1);
 		}
 	}
 }
@@ -364,6 +366,15 @@ function keyUp(e) {
 	}
 }
 
+function levelWin() {
+	playState = 2;
+	var msg = "Level complete!<br>Press SPACE to continue.";
+	if (level+1 === Levels.length) {
+		msg = "Game complete!";
+	}
+	$("#covermsg").show().html(msg);
+}
+
 function logic() {
 	if (playState !== 0 || paused) return;
 	var t0 = Date.now();
@@ -383,6 +394,10 @@ function logic() {
 						++haveTiles[e2.tile];
 						renderTiles();
 						return 2;
+					}
+					else if (e2.type === 'end') {
+						levelWin();
+						return;
 					}
 				}
 				else if (e2.type === 'me') return;
@@ -506,6 +521,9 @@ function loadLevel(lv) {
 			else if (c === 'T') {
 				var tile = lvi.special[spc++];
 				enemies.push(makeTileEnemy(pos, String.charCodeAt(tile)-65));
+			}
+			else if (c === 'E') {
+				enemies.push(new Enemy('end', pos, function() {}));
 			}
 			else if (c === 'S') {
 				mePos = pos;
