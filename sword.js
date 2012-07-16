@@ -5,6 +5,7 @@ var H = 400;
 var TILEH = 39;
 var TILEW = 39.75;
 
+var meImg = null;
 var Me = null;
 var haveTiles = [];
 var chmap = [];
@@ -38,9 +39,22 @@ function within(area, pos) {
 }
 
 function LetterQ() {
+	this.ui = null;
 	this.to = null;
 	this.word = ''; this.score = 0;
 }
+LetterQ.prototype.addFadeMsg = function(msg, color) {
+	var g = $("#game").offset(), offs = this.ui.offset();
+	var left = offs.left - g.left;
+	var top = offs.top - g.top;
+	var e = $("<div class='fademsg'>").appendTo(overlayEl);
+	e.text(msg).css({top: top, left: left, color: color});
+	setTimeout(function() {
+		e.animate({top: top-20, opacity: 0}, 500, function() {
+			e.remove();
+		});
+	}, 50);
+};
 LetterQ.prototype.clearTO = function() {
 	if (this.to === null) return;
 	clearTimeout(this.to);
@@ -50,11 +64,14 @@ LetterQ.prototype.add = function(letter, done, min) {
 	this.clearTO();
 	this.word += String.fromCharCode(letter+97);
 	this.score += pointsmap[letter];
+	this.ui.text(this.word);
 	var word = this.word, totScore = this.score, remScore = 0;
 	for (var i = 0; i < word.length; ++i) {
 		if (totScore - remScore < min) break;
 		if (WordList.indexOf(word.substr(i)) !== -1) {
 			this.word = ''; this.score = 0;
+			this.addFadeMsg(word.substr(i), 'green');
+			this.ui.empty();
 			this.to = setTimeout(done);
 			return;
 		}
@@ -65,17 +82,20 @@ LetterQ.prototype.add = function(letter, done, min) {
 	var self = this;
 	this.to = setTimeout(function() {
 		self.word = ''; self.score = 0;
+		var err = '';
 		if (!lastCorrect) {
 			if (word === "imager")
-				alert("French is not allowed.");
+				err = "French is not allowed";
 			else
-				alert("Invalid word " + word);
+				err = "invalid word " + word;
 		}
 		else if (totScore < min) {
-			alert("Score too low: " + totScore + " out of required " + min);
+			err = "score too low";
 		}
+		self.addFadeMsg(err, 'red');
+		self.ui.empty();
 	}, 1100);
-}
+};
 
 function Enemy(type, pos, move) {
 	this.pos = pos;
@@ -115,8 +135,9 @@ Enemy.prototype.addLetter = function(letter, done, min) {
 Enemy.prototype.makeHolder = function() {
 	this.el = $("<div class='enemy'>").addClass("enemy-" + this.type)
 		.appendTo($("#enemies"));
+	this.letterQ.ui = $("<div class='q-msg'>").appendTo(this.el);
 	this.setPos();
-}
+};
 
 function modmid(a, b) {
 	var res = a % b;
@@ -137,7 +158,7 @@ Enemy.prototype.getRect = function() {
 	var rpos = this.pos;
 	var hb = this.hitbox;
 	return {x: rpos.x + hb.x, y: rpos.y + hb.x, w: hb.w, h: hb.h};
-}
+};
 
 function areaFail(rect) {
 	var scrw = TILEW*levelMap[0].length;
@@ -164,7 +185,7 @@ Enemy.prototype.wallMove = function(dx, dy) {
 	if (areaFail(this.getRect())) rpos.x -= dx;
 	rpos.y += dy;
 	if (areaFail(this.getRect())) rpos.y -= dy;
-}
+};
 
 function setMeImg() {
 	var src = 'img/me'+myFacing[0]+myFacing[1]+'.png';
@@ -252,7 +273,7 @@ function keyPress(e) {
 	var cc = e.charCode;
 	if (cc >= 97 && cc < 97+26) cc -= 32;
 	var k = String.fromCharCode(cc);
-	if (playState < 2 && k === 'R') {
+	if (playState < 2 && k === '\n') {
 		// Restart
 		destroyLevel();
 		loadLevel(level);
@@ -354,7 +375,7 @@ function logic() {
 	for (var i = 0; i < enemies.length; ++i) {
 		var e1 = enemies[i];
 		for (var j = 0; j < enemies.length; ++j) {
-			var e2 = enemies[j], rem = false;
+			var e2 = enemies[j];
 			if (e1 === e2 || !overlap(e1.getRect(), e2.getRect())) continue;
 			var rem = (function() {
 				if (e1.type === 'me') {
@@ -422,7 +443,7 @@ var TimingT = 0;
 
 function getT() { return Timing/TimingT; }
 
-Levels = [
+var Levels = [
 	{
 		map: [
 			'#   T#     #',
@@ -448,6 +469,7 @@ function destroyLevel() {
 }
 
 function loadLevel(lv) {
+	overlayEl.empty();
 	level = lv;
 	var lvi = Levels[lv], spc = 0;
 	paused = false;

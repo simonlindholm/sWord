@@ -17,6 +17,8 @@ body {
 }*/
 #overlay {
 	position: absolute;
+	top: 0;
+	left: 0;
 	z-index: 2;
 }
 #field {
@@ -77,6 +79,10 @@ body {
 	position: absolute;
 	z-index: 2;
 }
+.enemy-0 {
+	height: 40px;
+	width: 40px;
+}
 .enemy-me {
 	margin-top: 1px;
 	z-index: 1;
@@ -108,6 +114,23 @@ body {
 	width: 21px;
 	line-height: 20px;
 	font-size: 15px;
+}
+.q-msg {
+	position: absolute;
+	right: -4px;
+	width: 0;
+	overflow: visible;
+	top: 0px;
+	font: 10px sans-serif;
+}
+.fademsg {
+	position: absolute;
+	height: 0;
+	width: 0;
+	white-space: nowrap;
+	overflow: visible;
+	font: 10px sans-serif;
+	opacity: 1;
 }
 
 #bgcont {
