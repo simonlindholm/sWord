@@ -22,18 +22,20 @@ body {
 	z-index: 2;
 }
 #field {
-	position: absolute;
 	background-color: white;
 	z-index: 1;
 	width: 100%;
+	position: relative;
+	/*position: absolute;*/
 	/*height: 400px;*/
 }
 #inv {
 	position: absolute;
 	background-color: white;
 	z-index: 4;
-	top: 400px;
 	width: 100%;
+	/*top: 400px;*/
+	margin: 17px 0 0 1px;
 }
 #covermsg {
 	position: absolute;
@@ -111,6 +113,21 @@ body {
 	width: 4px;
 	padding: 10px 14px;
 }
+.enemy-shield {
+	background: url(img/small-def0.png) no-repeat;
+	height: 40px;
+	width: 40px;
+	margin-left: 2px;
+}
+.enemy-shield[data-vert="1"] {
+	background: url(img/small-def1.png) no-repeat;
+}
+.enemy-spikes {
+	background: url(img/spikes.png) no-repeat;
+	height: 40px;
+	width: 40px;
+	margin-left: 3px;
+}
 .enemy-tile, .enemy-message {
 	background-color: white;
 	border: 1px solid black;
@@ -157,7 +174,7 @@ body {
 	height: 39px;
 	padding: 0;
 }
-.tile-0, .tile-1, .tile-bg, .tile-S, .tile-T {
+.tile-0, .tile-1, .tile-bg, .tile-S, .tile-T, .tile-spikes {
 	background: #EEFF00; /*url(img/bg.png)*/
 }
 .tile-E {

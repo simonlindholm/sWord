@@ -1,9 +1,4 @@
-// imager french
-
-// edks
-// crue
-// wesq
-// -> queers, creeds, skewed 
+// "sound" as comment
 
 var W = 500;
 var H = 400;
@@ -74,14 +69,16 @@ LetterQ.prototype.clearTO = function() {
 	clearTimeout(this.to);
 	this.to = null;
 };
-LetterQ.prototype.add = function(letter, done, min) {
+LetterQ.prototype.add = function(letter, done, Sc, min) {
+	// sound
 	this.clearTO();
 	this.word += String.fromCharCode(letter+97);
 	this.score += pointsmap[letter];
 	this.ui.text(this.word);
 	var word = this.word, totScore = this.score, remScore = 0;
 	for (var i = 0; i < word.length; ++i) {
-		if (totScore - remScore < min) break;
+		if (Sc && totScore - remScore < min) break;
+		if (!Sc && word.length-i < min) break;
 		if (WordList.indexOf(word.substr(i)) !== -1) {
 			this.word = ''; this.score = 0;
 			this.addFadeMsg(word.substr(i), 'green');
@@ -103,8 +100,11 @@ LetterQ.prototype.add = function(letter, done, min) {
 			else
 				err = "invalid word " + word;
 		}
-		else if (totScore < min) {
+		else if (Sc) {
 			err = "score too low";
+		}
+		else if (!Sc) {
+			err = "Too short";
 		}
 		self.addFadeMsg(err, 'red');
 		self.ui.empty();
@@ -129,6 +129,10 @@ function Enemy(type, pos, move) {
 		this.hitbox = {x: 2, y: 2, w: 16, h: 16};
 	else if (type === 'end')
 		this.hitbox = {x: 4, y: 4, w: 31, h: 31};
+	else if (type === 'spikes')
+		this.hitbox = {x: 4, y: 4, w: 31, h: 31};
+	else if (type === 'shield')
+		this.hitbox = {x: 4, y: 4, w: 31, h: 31};
 }
 
 function sq(x) { return x*x; }
@@ -145,8 +149,8 @@ Enemy.prototype.setPos = function() {
 	});
 };
 
-Enemy.prototype.addLetter = function(letter, done, min, stunDir) {
-	this.letterQ.add(letter, done, min);
+Enemy.prototype.addLetter = function(letter, done, type, min, stunDir) {
+	this.letterQ.add(letter, done, (type === 'S'), min);
 	if (this.stunUntil + 140 <= Date.now()) {
 		this.wallMove(stunDir.x, stunDir.y, false);
 		this.wallMove(stunDir.x, stunDir.y, false);
@@ -230,6 +234,22 @@ function makeMeEnemy(pos) {
 	return e;
 }
 
+function makeSpikesEnemy(pos) {
+	return new Enemy('spikes', pos, function() {}).makeHolder();
+}
+
+function makeShieldEnemy(pos, vert, from, to) {
+	var pos1 = {x: pos.x, y: pos.y};
+	var pos2 = {x: pos.x, y: pos.y};
+	var dim = vert ? 'y' : 'x', sz = vert ? TILEH : TILEW;
+	pos1[dim] = from * sz;
+	pos2[dim] = to * sz;
+	var e = new Enemy('shield', pos, makeCycleMove([pos1, pos2], 1)).makeHolder();
+	e.el.attr('data-vert', vert?1:0);
+	e.vert = vert;
+	return e;
+}
+
 function makeMessageEnemy(midpos, tile, dir) {
 	var sp2 = 2.5;
 	var e = new Enemy('message', midpos, function() {
@@ -240,6 +260,7 @@ function makeMessageEnemy(midpos, tile, dir) {
 	e.pos.x -= e.hitbox.w/2;
 	e.pos.y -= e.hitbox.h/2;
 	e.tile = tile;
+	e.vert = !!dir[0];
 	e.stunDir = {x: dir[1] * sp2, y: dir[0] * sp2};
 	e.makeHolder();
 	e.el.text(String.fromCharCode(tile + 65));
@@ -287,7 +308,8 @@ function makeCycleMove(ar, speed) {
 		var cur = this.pos, next = ar[ind];
 		var d = Math.sqrt(sq(cur.x-next.x) + sq(cur.y-next.y));
 		if (d < speed) {
-			this.pos = next;
+			cur.x = next.x;
+			cur.y = next.y;
 			++ind;
 			ind %= ar.length;
 		}
@@ -451,6 +473,43 @@ function removeWall(x, y, td) {
 	td.removeClass().addClass('tile tile-bg').text('');
 }
 
+function spawnLevelLogic() {
+	if (!lvTemp.stage) lvTemp.stage = 0;
+	var end = Lvi.map.length;
+	var addTiles = {
+		1: [[2,3,'A'], [3,2,'S'], [8,3,'T'], [7,2,'A']],
+		4: [[2,3,'S'], [2,5,'E'], [3,6,'R'], [7,6,'S'], [8,5,'E'], [8,3,'W']]
+	};
+	var addEnemies = { // 2/7, -1/end
+		0: [[2,-1,3,2]],
+		2: [[2,-1,1,1.7], [7,-1,1,1.7]],
+		3: [[7,end,4,2.7]],
+		5: [[2,end,sco("sewers"),1.5]]
+	};
+	if (enemies.every(function(e) { return e.type !== 'tile' && e.type !== 'small'; })) { // empty; spawn things
+		if (lvTemp.stage in addEnemies) {
+			addEnemies[lvTemp.stage].forEach(function(a) {
+				enemies.push(makeOutEnemy(tilePos(a[0], a[1]), a[2], a[3]));
+			});
+			++lvTemp.stage;
+		}
+		else if (lvTemp.stage in addTiles) {
+			addTiles[lvTemp.stage].forEach(function(a) {
+				enemies.push(makeTileEnemy(tilePos(a[0], a[1]), String.charCodeAt(a[2])-65));
+			});
+			++lvTemp.stage;
+		}
+		else {
+			var beam = lvTemp.theBeam;
+			if (beam) {
+				// sound
+				delete lvTemp.theBeam;
+				removeWall(beam.x, beam.y, beam.td);
+			}
+		}
+	}
+}
+
 function logic() {
 	if (playState !== 0 || paused) return;
 	var time = Date.now();
@@ -477,7 +536,11 @@ function logic() {
 						levelWin();
 						return;
 					}
-					else if (e2.type === 'small') {
+					else if (e2.type === 'small' || e2.type === 'shield') {
+						levelLose();
+						return 1;
+					}
+					else if (e2.type === 'spikes') {
 						levelLose();
 						return 1;
 					}
@@ -495,7 +558,7 @@ function logic() {
 								if (ind === -1) alert("fail");
 								e.remove();
 								enemies.splice(ind, 1);
-							}, e.needed, {x: 0, y:0});
+							}, 'L', e.needed, {x: 0, y:0});
 						})();
 						return 1;
 					}
@@ -506,10 +569,19 @@ function logic() {
 								var ind = enemies.indexOf(e);
 								e.remove();
 								enemies.splice(ind, 1);
-							}, e.needed, e1.stunDir);
-							// paused = true;
+							}, 'S', e.needed, e1.stunDir);
 						})();
 						return 1;
+					}
+					if (e2.type === 'shield') {
+						if (e1.vert !== e2.vert) {
+							e2.letterQ.addFadeMsg("BAM", 'green');
+							return 3;
+						}
+						else {
+							e2.letterQ.addFadeMsg("block", 'black');
+							return 1;
+						}
 					}
 				}
 			})();
@@ -540,41 +612,8 @@ function logic() {
 		}
 	}
 
-	if (Lvi.spawnLevel) {
-		if (!lvTemp.stage) lvTemp.stage = 0;
-		var end = Lvi.map.length;
-		var addTiles = {
-			1: [[2,3,'A'], [3,2,'S'], [8,3,'T'], [7,2,'A']],
-			4: [[2,3,'S'], [2,5,'E'], [3,6,'R'], [7,6,'S'], [8,5,'E'], [8,3,'W']]
-		};
-		var addEnemies = { // 2/7, -1/end
-			0: [[2,-1,3,2]],
-			2: [[2,-1,1,1.7], [7,-1,1,1.7]],
-			3: [[7,end,4,2.7]],
-			5: [[2,end,sco("sewers"),1.5]]
-		};
-		if (enemies.every(function(e) { return e.type !== 'tile' && e.type !== 'small'; })) { // empty; spawn things
-			if (lvTemp.stage in addEnemies) {
-				addEnemies[lvTemp.stage].forEach(function(a) {
-					enemies.push(makeOutEnemy(tilePos(a[0], a[1]), a[2], a[3]));
-				});
-				++lvTemp.stage;
-			}
-			else if (lvTemp.stage in addTiles) {
-				addTiles[lvTemp.stage].forEach(function(a) {
-					enemies.push(makeTileEnemy(tilePos(a[0], a[1]), String.charCodeAt(a[2])-65));
-				});
-				++lvTemp.stage;
-			}
-			else {
-				var beam = lvTemp.theBeam;
-				if (beam) {
-					delete lvTemp.theBeam;
-					removeWall(beam.x, beam.y, beam.td);
-				}
-			}
-		}
-	}
+	if (Lvi.spawnLevel)
+		spawnLevelLogic();
 
 	// enemies shooting sometimes
 	var t1 = Date.now();
@@ -600,8 +639,23 @@ var Levels = [
 			'#     # T T#',
 			'#     #    #'
 		],
-		special: ['T', 'L', 'U', 'N', 'I', 'Y', 12, 'T', 'P', 'E', 'S', 11,
-		'S', 'E', 'I', 10, 'D', 'C', 'N', 'I']
+		special: ['T', 'L', 'U', 'N', 'I', 'Y', 5, 'T', 'P', 'E', 'S', 5,
+		'S', 'E', 'I', 7, 'D', 'C', 'N', 'I']
+	},
+	{
+		// queers, creeds, skewed 
+		map: [
+			'    TT S# E ',
+			'        #   ',
+			'  ^^^^^^##0#',
+			'  ^TTTT     ',
+			'  ^TTTT^ ^^^',
+			'  ^TTTT^3^##',
+			'  ^^^^^^ ^##',
+			'    3    ^##',
+		],
+		special: ['Z', 'Z', 6, 'E', 'D', 'K', 'S', 'C', 'R', 'U', 'E',
+		'W', 'E', 'S', 'Q', true, 3, 5, false, 3, 6]
 	},
 	{
 		map: [
@@ -620,7 +674,7 @@ var Levels = [
 	}
 ];
 
-Levels[0] = Levels[1];
+// Levels[0] = Levels[1];
 
 function destroyLevel() {
 	enemies.forEach(function(e) {
@@ -654,18 +708,18 @@ function loadLevel(lv) {
 		var s = m[i];
 		var tr = $("<tr>").appendTo(Bg);
 		for (var j = 0; j < s.length; ++j) {
-			var c = s[j], cl = (c === ' ' ? 'bg' : c === '#' ? 'wall' : c);
+			var c = s[j], cl = (c === ' ' || c === '3' ? 'bg' : c === '#' ? 'wall' : c === '^' ? 'spikes' : c);
 			var td = $("<td>").addClass("bgtile tile-" + cl).appendTo(tr);
-			var pos = {y: TILEH*i, x: TILEW*j};
+			var pos = tilePos(j, i);
 			if (c === '0') {
 				var needed = lvi.special[spc++];
 				td.html("<span><span>" + needed + "</span></span>");
-				var e = new Enemy('0', pos, function() {});
+				var e = new Enemy('0', pos, function() {}).makeHolder();
 				e.ty = i;
 				e.tx = j;
 				e.td = td;
 				e.needed = needed;
-				enemies.push(e.makeHolder());
+				enemies.push(e);
 			}
 			else if (c === 'T') {
 				var tile = lvi.special[spc++];
@@ -676,6 +730,15 @@ function loadLevel(lv) {
 			}
 			else if (c === 'S') {
 				mePos = pos;
+			}
+			else if (c === '3') {
+				var vert = lvi.special[spc++];
+				var pos1 = lvi.special[spc++];
+				var pos2 = lvi.special[spc++];
+				enemies.push(makeShieldEnemy(pos, vert, pos1, pos2));
+			}
+			else if (c === '^') {
+				enemies.push(makeSpikesEnemy(pos));
 			}
 			else if (c === '1') {
 				lvTemp.theBeam = {y: i, x: j, td: td};
