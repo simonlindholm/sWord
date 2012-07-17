@@ -26,7 +26,7 @@ body {
 	background-color: white;
 	z-index: 1;
 	width: 100%;
-	height: 400px;
+	/*height: 400px;*/
 }
 #inv {
 	position: absolute;
@@ -37,6 +37,15 @@ body {
 }
 #covermsg {
 	position: absolute;
+	top: 0;
+	z-index: 10;
+	padding-top: 170px;
+	font: 20px serif;
+	color: gold;
+	-moz-box-sizing: border-box;
+	-webkit-box-sizing: border-box;
+	-o-box-sizing: border-box;
+	text-align: center;
 	width: 100%;
 	height: 100%;
 	display: none;
@@ -61,8 +70,8 @@ body {
 	text-align: center;
 }
 #inv .points {
-	line-height: 10px;
-	font-size: 11px;
+	line-height: 13px;
+	font-size: 13px;
 	vertical-align: super;
 }
 
@@ -95,6 +104,12 @@ body {
 }
 .enemy-me > img[data-facing="0-1"] { /*left*/
 	margin-top: 1px;
+}
+.enemy-small {
+	background: url(img/small.png) no-repeat;
+	height: 20px;
+	width: 4px;
+	padding: 10px 14px;
 }
 .enemy-tile, .enemy-message {
 	background-color: white;
@@ -142,11 +157,18 @@ body {
 	height: 39px;
 	padding: 0;
 }
-.tile-0, .tile-bg, .tile-S, .tile-T {
+.tile-0, .tile-1, .tile-bg, .tile-S, .tile-T {
 	background: #EEFF00; /*url(img/bg.png)*/
 }
 .tile-E {
 	background: #DD8800;
+}
+.tile-1::after {
+	margin: 0 10px;
+	background-color: #ccc;
+	content: '';
+	height: 40px;
+	display: block;
 }
 .tile-wall {
 	background-color: black;

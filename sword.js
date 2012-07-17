@@ -1,10 +1,16 @@
 // imager french
 
+// edks
+// crue
+// wesq
+// -> queers, creeds, skewed 
+
 var W = 500;
 var H = 400;
 var TILEH = 39;
 var TILEW = 39.75;
 
+var Lvi;
 var meImg = null;
 var Me = null;
 var haveTiles = [];
@@ -21,6 +27,7 @@ var paused = false;
 var signAreas = null;
 var wordsUsed = null;
 var enemies = null;
+var lvTemp = {};
 
 var pointsmap = [
 	1, 3, 4, 1, 1, 4, 3, 2, 1, 10, //j
@@ -31,6 +38,13 @@ var pointsmap = [
 for (var i = 0; i < 26; ++i) {
 	haveTiles.push(0);
 	chmap.push(String.fromCharCode(65 + i));
+}
+
+function sco(word) {
+	var sum = 0;
+	for (var i = 0; i < word.length; ++i)
+		sum += pointsmap[word.charCodeAt(i)-97];
+	return sum;
 }
 
 function within(area, pos) {
@@ -98,6 +112,7 @@ LetterQ.prototype.add = function(letter, done, min) {
 };
 
 function Enemy(type, pos, move) {
+	this.stunUntil = 0;
 	this.pos = pos;
 	this.move = move;
 	this.type = type;
@@ -105,13 +120,13 @@ function Enemy(type, pos, move) {
 	if (type === '0')
 		this.hitbox = {x: 0, y: 0, w: TILEW, h: TILEH};
 	else if (type === 'small')
-		this.hitbox = {x: 10, y: 10, w: 10, h: 10};
+		this.hitbox = {x: 8, y: 8, w: 24, h: 24};
 	else if (type === 'me')
 		this.hitbox = {x: 6, y: 6, w: 27, h: 27};
 	else if (type === 'tile')
 		this.hitbox = {x: 3, y: 3, w: 33, h: 33};
 	else if (type === 'message')
-		this.hitbox = {x: 4, y: 4, w: 12, h: 12};
+		this.hitbox = {x: 2, y: 2, w: 16, h: 16};
 	else if (type === 'end')
 		this.hitbox = {x: 4, y: 4, w: 31, h: 31};
 }
@@ -130,8 +145,13 @@ Enemy.prototype.setPos = function() {
 	});
 };
 
-Enemy.prototype.addLetter = function(letter, done, min) {
+Enemy.prototype.addLetter = function(letter, done, min, stunDir) {
 	this.letterQ.add(letter, done, min);
+	if (this.stunUntil + 140 <= Date.now()) {
+		this.wallMove(stunDir.x, stunDir.y, false);
+		this.wallMove(stunDir.x, stunDir.y, false);
+	}
+	this.stunUntil = Date.now() + 300;
 };
 
 Enemy.prototype.makeHolder = function() {
@@ -139,6 +159,7 @@ Enemy.prototype.makeHolder = function() {
 		.appendTo($("#enemies"));
 	this.letterQ.ui = $("<div class='q-msg'>").appendTo(this.el);
 	this.setPos();
+	return this;
 };
 
 function modmid(a, b) {
@@ -162,17 +183,19 @@ Enemy.prototype.getRect = function() {
 	return {x: rpos.x + hb.x, y: rpos.y + hb.x, w: hb.w, h: hb.h};
 };
 
-function areaFail(rect) {
-	var scrw = TILEW*levelMap[0].length;
-	var scrh = TILEH*levelMap.length;
-	if (rect.x < 0) return true;
-	if (rect.y < 0) return true;
-	if (rect.x + rect.w >= scrw) return true;
-	if (rect.y + rect.h >= scrh) return true;
+function areaFail(rect, allowOutside) {
+	if (!allowOutside) {
+		var scrw = TILEW*levelMap[0].length;
+		var scrh = TILEH*levelMap.length;
+		if (rect.x < 0) return true;
+		if (rect.y < 0) return true;
+		if (rect.x + rect.w >= scrw) return true;
+		if (rect.y + rect.h >= scrh) return true;
+	}
 	for (var i = 0; i < levelMap.length; ++i) {
 		var row = levelMap[i];
 		for (var j = 0; j < row.length; ++j) {
-			if (row[j] !== '#' && row[j] !== '0') continue;
+			if ("#01".indexOf(row[j]) === -1) continue;
 			var area = {y: TILEH*i, x: TILEW*j, w: TILEW, h: TILEH};
 			if (overlap(area, rect))
 				return true;
@@ -181,12 +204,12 @@ function areaFail(rect) {
 	return false;
 }
 
-Enemy.prototype.wallMove = function(dx, dy) {
+Enemy.prototype.wallMove = function(dx, dy, ignoreWalls) {
 	var rpos = this.pos;
 	rpos.x += dx;
-	if (areaFail(this.getRect())) rpos.x -= dx;
+	if (areaFail(this.getRect(), ignoreWalls)) rpos.x -= dx;
 	rpos.y += dy;
-	if (areaFail(this.getRect())) rpos.y -= dy;
+	if (areaFail(this.getRect(), ignoreWalls)) rpos.y -= dy;
 };
 
 function setMeImg() {
@@ -197,13 +220,18 @@ function setMeImg() {
 }
 
 function makeMeEnemy(pos) {
-	return new Enemy('me', pos, function() {
+	var e = new Enemy('me', pos, function() {
 		var sp = 4;
-		this.wallMove(myDirection[1]*sp, myDirection[0]*sp);
-	});
+		this.wallMove(myDirection[1]*sp, myDirection[0]*sp, false);
+	}).makeHolder();
+	meImg = $("<img alt='<you>'>");
+	setMeImg();
+	meImg.appendTo(e.el);
+	return e;
 }
 
 function makeMessageEnemy(midpos, tile, dir) {
+	var sp2 = 2.5;
 	var e = new Enemy('message', midpos, function() {
 		var sp = 14;
 		this.pos.x += dir[1] * sp;
@@ -212,27 +240,60 @@ function makeMessageEnemy(midpos, tile, dir) {
 	e.pos.x -= e.hitbox.w/2;
 	e.pos.y -= e.hitbox.h/2;
 	e.tile = tile;
+	e.stunDir = {x: dir[1] * sp2, y: dir[0] * sp2};
+	e.makeHolder();
+	e.el.text(String.fromCharCode(tile + 65));
 	return e;
 }
 
 function makeTileEnemy(pos, tile) {
 	var e = new Enemy('tile', pos, function() {});
 	e.tile = tile;
+	e.makeHolder();
+	e.el.text(String.fromCharCode(tile+65));
+	return e;
+}
+
+function makeOutEnemy(pos, needed, sp) {
+	var isOut = false, top = (pos.y < 0);
+	var e = new Enemy('small', pos, function() {
+		var cur = this.pos;
+		if (!isOut) {
+			if (top) {
+				cur.y += sp;
+				isOut = (cur.y > TILEH);
+			}
+			else {
+				cur.y -= sp;
+				isOut = (cur.y < TILEH*(Lvi.map.length-2));
+			}
+		}
+		else {
+			var next = Me.pos;
+			var d = Math.sqrt(sq(cur.x-next.x) + sq(cur.y-next.y));
+			cur.x += (next.x-cur.x)*sp / d;
+			cur.y += (next.y-cur.y)*sp / d;
+		}
+	});
+	e.needed = needed;
+	e.makeHolder();
+	e.el.prepend(needed);
 	return e;
 }
 
 function makeCycleMove(ar, speed) {
 	var ind = 0;
 	return function() {
-		var cur = this.pos, next = ar[ind]; var d = sq(cur.x-next.x) + sq(cur.y-next.y); var sp2 = sq(speed);
-		if (d < sp2) {
+		var cur = this.pos, next = ar[ind];
+		var d = Math.sqrt(sq(cur.x-next.x) + sq(cur.y-next.y));
+		if (d < speed) {
 			this.pos = next;
 			++ind;
 			ind %= ar.length;
 		}
 		else {
-			cur.x += (next.x-cur.x)*(sp2 / d);
-			cur.y += (next.y-cur.y)*(sp2 / d);
+			cur.x += (next.x-cur.x)*speed / d;
+			cur.y += (next.y-cur.y)*speed / d;
 		}
 	};
 }
@@ -266,8 +327,6 @@ function shootTile(ch) {
 	renderTiles();
 	var pos = {x: Me.pos.x+Me.hitbox.w/2, y: Me.pos.y+Me.hitbox.h/2};
 	var e = makeMessageEnemy(pos, ch, myFacing);
-	e.makeHolder();
-	e.el.text(String.fromCharCode(ch + 65));
 	enemies.push(e);
 }
 
@@ -308,7 +367,7 @@ function keyPress(e) {
 		}
 	}
 	else if (playState === 2) {
-		if (k === ' ') {
+		if (e.keyCode === 13) {
 			destroyLevel();
 			loadLevel(level+1===Levels.length ? 0 : level+1);
 		}
@@ -360,6 +419,7 @@ function keyUp(e) {
 			// Facing somewhere we are not walking - readjust.
 			myFacing = [0, 0];
 			var axis = myFacing[0] ? 1 : 0;
+			if (!myDirection[axis]) axis ^= 1;
 			myFacing[axis] = myDirection[axis];
 			setMeImg();
 		}
@@ -368,20 +428,38 @@ function keyUp(e) {
 
 function levelWin() {
 	playState = 2;
-	var msg = "Level complete!<br>Press SPACE to continue.";
+	var msg = "Level complete!<br>Press ENTER to continue.";
 	if (level+1 === Levels.length) {
 		msg = "Game complete!";
 	}
-	$("#covermsg").show().html(msg);
+	$("#covermsg").html(msg).show();
+}
+
+function levelLose() {
+	playState = 1;
+	var msg = "You died!<br>Press ENTER to retry.";
+	$("#covermsg").html(msg).show();
+}
+
+function tilePos(x, y) {
+	return {x: x*TILEW, y: y*TILEH};
+}
+
+function removeWall(x, y, td) {
+	var s = levelMap[y];
+	levelMap[y] = s.substr(0, x) + ' ' + s.substr(x+1);
+	td.removeClass().addClass('tile tile-bg').text('');
 }
 
 function logic() {
 	if (playState !== 0 || paused) return;
-	var t0 = Date.now();
+	var time = Date.now();
 	for (var i = 0; i < enemies.length; ++i) {
 		var e = enemies[i];
-		e.move();
-		e.setPos();
+		if (e.stunUntil <= time) {
+			e.move();
+			e.setPos();
+		}
 	}
 	for (var i = 0; i < enemies.length; ++i) {
 		var e1 = enemies[i];
@@ -399,6 +477,10 @@ function logic() {
 						levelWin();
 						return;
 					}
+					else if (e2.type === 'small') {
+						levelLose();
+						return 1;
+					}
 				}
 				else if (e2.type === 'me') return;
 
@@ -408,14 +490,24 @@ function logic() {
 						(function() {
 							var e = e2;
 							e.addLetter(e1.tile, function() {
-								var s = levelMap[e.ty];
-								levelMap[e.ty] = s.substr(0, e.tx) + ' ' + s.substr(e.tx+1);
-								e.td.removeClass('tile-0').addClass('tile-bg').text('');
+								removeWall(e.tx, e.ty, e.td);
 								var ind = enemies.indexOf(e);
 								if (ind === -1) alert("fail");
 								e.remove();
 								enemies.splice(ind, 1);
-							}, e.needed);
+							}, e.needed, {x: 0, y:0});
+						})();
+						return 1;
+					}
+					if (e2.type === 'small') {
+						(function() {
+							var e = e2;
+							e.addLetter(e1.tile, function() {
+								var ind = enemies.indexOf(e);
+								e.remove();
+								enemies.splice(ind, 1);
+							}, e.needed, e1.stunDir);
+							// paused = true;
 						})();
 						return 1;
 					}
@@ -448,9 +540,45 @@ function logic() {
 		}
 	}
 
+	if (Lvi.spawnLevel) {
+		if (!lvTemp.stage) lvTemp.stage = 0;
+		var end = Lvi.map.length;
+		var addTiles = {
+			1: [[2,3,'A'], [3,2,'S'], [8,3,'T'], [7,2,'A']],
+			4: [[2,3,'S'], [2,5,'E'], [3,6,'R'], [7,6,'S'], [8,5,'E'], [8,3,'W']]
+		};
+		var addEnemies = { // 2/7, -1/end
+			0: [[2,-1,3,2]],
+			2: [[2,-1,1,1.7], [7,-1,1,1.7]],
+			3: [[7,end,4,2.7]],
+			5: [[2,end,sco("sewers"),1.5]]
+		};
+		if (enemies.every(function(e) { return e.type !== 'tile' && e.type !== 'small'; })) { // empty; spawn things
+			if (lvTemp.stage in addEnemies) {
+				addEnemies[lvTemp.stage].forEach(function(a) {
+					enemies.push(makeOutEnemy(tilePos(a[0], a[1]), a[2], a[3]));
+				});
+				++lvTemp.stage;
+			}
+			else if (lvTemp.stage in addTiles) {
+				addTiles[lvTemp.stage].forEach(function(a) {
+					enemies.push(makeTileEnemy(tilePos(a[0], a[1]), String.charCodeAt(a[2])-65));
+				});
+				++lvTemp.stage;
+			}
+			else {
+				var beam = lvTemp.theBeam;
+				if (beam) {
+					delete lvTemp.theBeam;
+					removeWall(beam.x, beam.y, beam.td);
+				}
+			}
+		}
+	}
+
 	// enemies shooting sometimes
 	var t1 = Date.now();
-	Timing += t1-t0;
+	Timing += t1-time;
 	TimingT++;
 }
 var Timing = 0;
@@ -474,19 +602,38 @@ var Levels = [
 		],
 		special: ['T', 'L', 'U', 'N', 'I', 'Y', 12, 'T', 'P', 'E', 'S', 11,
 		'S', 'E', 'I', 10, 'D', 'C', 'N', 'I']
+	},
+	{
+		map: [
+			'## #### ##  ',
+			'#        #  ',
+			'#        #  ',
+			'# T    T #  ',
+			'#   S    1 E',
+			'# T    T #  ',
+			'#  T  T  #  ',
+			'#        #  ',
+			'## #### ##  ',
+		],
+		special: ['R', 'C', 'A', 'E', 'T', 'R'],
+		spawnLevel: 1
 	}
 ];
+
+Levels[0] = Levels[1];
 
 function destroyLevel() {
 	enemies.forEach(function(e) {
 		e.remove();
 	});
+	enemies = [];
 }
 
 function loadLevel(lv) {
 	overlayEl.empty();
 	level = lv;
 	var lvi = Levels[lv], spc = 0;
+	Lvi = lvi;
 	paused = false;
 	playState = 0;
 	wordsUsed = [];
@@ -499,7 +646,9 @@ function loadLevel(lv) {
 	var mePos;
 	myDirection = [0, 0];
 	myFacing = [-1, 0];
+	lvTemp = {};
 	var Bg = $("#bg").empty();
+	$("#enemies").empty();
 	for (var i = 0; i < 26; ++i) haveTiles[i] = 0;
 	for (var i = 0; i < m.length; ++i) {
 		var s = m[i];
@@ -516,35 +665,27 @@ function loadLevel(lv) {
 				e.tx = j;
 				e.td = td;
 				e.needed = needed;
-				enemies.push(e);
+				enemies.push(e.makeHolder());
 			}
 			else if (c === 'T') {
 				var tile = lvi.special[spc++];
 				enemies.push(makeTileEnemy(pos, String.charCodeAt(tile)-65));
 			}
 			else if (c === 'E') {
-				enemies.push(new Enemy('end', pos, function() {}));
+				enemies.push(new Enemy('end', pos, function() {}).makeHolder());
 			}
 			else if (c === 'S') {
 				mePos = pos;
 			}
+			else if (c === '1') {
+				lvTemp.theBeam = {y: i, x: j, td: td};
+			}
 		}
 	}
+	if (lvi.spawnLevel) mePos.x += TILEW/2;
 	var me = makeMeEnemy(mePos);
 	enemies.push(me);
 	Me = me;
-	var Eholder = $("#enemies").empty();
-	for (var i = 0; i < enemies.length; ++i) {
-		var e = enemies[i];
-		e.makeHolder();
-		if (e.type === 'tile')
-			e.el.text(String.fromCharCode(e.tile+65));
-		else if (e.type === 'me') {
-			meImg = $("<img alt='<you>'>");
-			setMeImg();
-			meImg.appendTo(e.el);
-		}
-	}
 	renderTiles();
 }
 
