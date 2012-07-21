@@ -26,6 +26,7 @@ body {
 	z-index: 1;
 	width: 100%;
 	position: relative;
+	overflow: hidden;
 	/*position: absolute;*/
 	/*height: 400px;*/
 }
@@ -86,6 +87,14 @@ body {
 	text-align: center;
 }
 
+.hp {
+	position: absolute;
+	top: -5px;
+	height: 1px;
+	background-color: blue;
+	width: 100%;
+}
+
 .enemy {
 	position: absolute;
 	z-index: 2;
@@ -94,17 +103,17 @@ body {
 	height: 40px;
 	width: 40px;
 }
-.enemy-me {
+.enemy-me, .enemy-boss {
 	margin-top: 1px;
 	z-index: 1;
 }
-.enemy-me > img[data-facing="-10"] { /*up*/
+.enemy > img[data-facing="-10"] { /*up*/
 	margin-left: 2px;
 }
-.enemy-me > img[data-facing="10"] { /*down*/
+.enemy > img[data-facing="10"] { /*down*/
 	margin-left: 3px;
 }
-.enemy-me > img[data-facing="0-1"] { /*left*/
+.enemy > img[data-facing="0-1"] { /*left*/
 	margin-top: 1px;
 }
 .enemy-small {
@@ -168,14 +177,19 @@ body {
 #bgcont {
 	border-collapse: collapse;
 }
+.hp {
+}
 .bgtile {
 	border: 1px solid black;
 	width: 39px;
 	height: 39px;
 	padding: 0;
 }
-.tile-0, .tile-1, .tile-bg, .tile-S, .tile-T, .tile-spikes {
+.tile-0, .tile-1, .tile-bg, .tile-S, .tile-T, .tile-spikes, .tile-- {
 	background: #EEFF00; /*url(img/bg.png)*/
+}
+.tile-Z {
+	background: #D0E100;
 }
 .tile-E {
 	background: #DD8800;
@@ -185,6 +199,13 @@ body {
 	background-color: #ccc;
 	content: '';
 	height: 40px;
+	display: block;
+}
+.tile--::after {
+	padding: 10px 0;
+	background-color: #ccc;
+	content: '';
+	width: 40px;
 	display: block;
 }
 .tile-wall {
