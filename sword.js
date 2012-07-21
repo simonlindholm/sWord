@@ -59,9 +59,9 @@ LetterQ.prototype.addFadeMsg = function(msg, color) {
 	var top = offs.top - g.top;
 	var e = $("<div class='fademsg'>").appendTo(overlayEl);
 	e.text(msg).css({top: top, left: left, color: color});
-	this.to = setTimeout(function() {
+	levelTimeout(function() {
 		e.animate({top: top-20, opacity: 0}, 500);
-		this.to = setTimeout(function() {
+		levelTimeout(function() {
 			e.remove();
 		}, 500);
 	}, 50);
@@ -724,7 +724,7 @@ function SRem0() {
 		enemies.push(makeOutEnemy(tilePos(3, 8), 0, 3));
 	}
 	else if (s === 3) {
-		enemies.push(makeOutEnemy(tilePos(1, 8), 0, 2.5));
+		enemies.push(makeOutEnemy(tilePos(1, 7), 0, 2.5));
 	}
 }
 
