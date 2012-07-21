@@ -185,8 +185,20 @@ body {
 	height: 39px;
 	padding: 0;
 }
-.tile-0, .tile-1, .tile-bg, .tile-S, .tile-T, .tile-spikes, .tile-- {
+.tile-0, .tile-1, .tile-bg, .tile-S, .tile-T, .tile-spikes, .tile--, .tile-M {
 	background: #EEFF00; /*url(img/bg.png)*/
+}
+.tile-M {
+	background-image: -moz-linear-gradient(to right, white, #FFFF28, #F1F100);
+	background-image: linear-gradient(to right, white, #FFFF28, #F1F100);
+}
+.span-M {
+	background-image: -moz-linear-gradient(130deg, white, #5252FF, white, #4646FC, white); /* 131deg if tileable */
+	background-image: linear-gradient(130deg, white, #5252FF, white, #4646FC, white);
+	display: block;
+	opacity: 0.65;
+	height: 100%;
+	width: 100%;
 }
 .tile-Z {
 	background: #D0E100;

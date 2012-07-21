@@ -32,11 +32,11 @@ var pointsmap = [
 ];
 
 var bossWords = [
-	"temporary", "whiplash", "damaging", "indirection", "clumpsyness",
-	"animosity", "querulousness", "assumption", "convertion",
-	"operands", "miraculous", "usefulness", "simplicity",
-	"fraternity", "territory", "groundbreaking", "explode",
-	"ruthlessly", "metamorphosis", "miniscule", "diaphanous",
+	"temporary", "damaging", "indirection", "clumpsyness",
+	"animosity", "querulousness", "assumption",
+	"miraculous", "usefulness", "simplicity",
+	"territory", "groundbreaking", "assemblage",
+	"metamorphosis", "miniscule", "diaphanous",
 	"ebullience", "ephemeral", "eloquence", "penumbra",
 	"quintessential", "serendipity", "labyrinthine"
 ], bossWc = 0;
@@ -80,12 +80,12 @@ function LetterQ() {
 	this.to = null;
 	this.word = ''; this.score = 0;
 }
-LetterQ.prototype.addFadeMsg = function(msg, color) {
+LetterQ.prototype.addFadeMsg = function(msg, color, bold) {
 	var g = $("#game").offset(), offs = this.ui.offset();
 	var left = offs.left - g.left;
 	var top = offs.top - g.top;
 	var e = $("<div class='fademsg'>").appendTo(overlayEl);
-	e.text(msg).css({top: top, left: left, color: color});
+	e.text(msg).css({top: top, left: left, color: color, fontWeight: (bold ? 'bold' : 'normal')});
 	levelTimeout(function() {
 		e.animate({top: top-20, opacity: 0}, 500);
 		levelTimeout(function() {
@@ -120,14 +120,14 @@ LetterQ.prototype.add = function(letter, done, type, min, check) {
 			var self = this;
 			this.to = setTimeout(function() {
 				self.word = ''; self.score = 0;
-				self.addFadeMsg(min, 'red');
+				self.addFadeMsg(min, 'red', true);
 				self.ui.empty();
 				done();
 			});
 		}
 		else {
 			this.word = ''; this.score = 0;
-			this.addFadeMsg("Invalid word", 'black');
+			this.addFadeMsg("Invalid word", 'black', true);
 			this.ui.empty();
 			return;
 		}
@@ -191,6 +191,8 @@ function Enemy(type, pos, move) {
 		this.hitbox = {x: 4, y: 4, w: 31, h: 31};
 	else if (type === 'shield')
 		this.hitbox = {x: 4, y: 4, w: 31, h: 31};
+	else if (type === 'mirror')
+		this.hitbox = {x: 0, y: 0, h: 40, w: 30};
 	else if (type === 'boss')
 		this.hitbox = {x: 4, y: 4, w: 31, h: 31};
 }
@@ -261,7 +263,7 @@ function areaFail(rect, allowOutside) {
 	for (var i = 0; i < levelMap.length; ++i) {
 		var row = levelMap[i];
 		for (var j = 0; j < row.length; ++j) {
-			if ("#01-".indexOf(row[j]) === -1) continue;
+			if ("#01-M".indexOf(row[j]) === -1) continue;
 			var area = {y: TILEH*i, x: TILEW*j, w: TILEW, h: TILEH};
 			if (overlap(area, rect))
 				return true;
@@ -317,9 +319,11 @@ function makeMessageEnemy(midpos, tile, dir) {
 	var sp2 = 2.5;
 	var e = new Enemy('message', midpos, function() {
 		var sp = 14;
-		this.pos.x += dir[1] * sp;
-		this.pos.y += dir[0] * sp;
+		this.pos.x += this.Ydir[1] * sp;
+		this.pos.y += this.Ydir[0] * sp;
 	});
+	e.Ydir = dir;
+	e.own = true;
 	e.pos.x -= e.hitbox.w/2;
 	e.pos.y -= e.hitbox.h/2;
 	e.tile = tile;
@@ -351,6 +355,10 @@ function makeBossMessageEnemy(midpos, tile, dir, word) {
 	e.makeHolder();
 	e.el.text(String.fromCharCode(tile + 65));
 	return e;
+}
+
+function makeMirrorEnemy(pos) {
+	return new Enemy('mirror', pos, function() {}).makeHolder();
 }
 
 function makeTileEnemy(pos, tile) {
@@ -639,7 +647,10 @@ function bossLevelLogic() {
 		var hp = orig;
 		var updateHP = function(dmg) {
 			hp -= dmg;
-			el.css('width', (hp/orig*100) + '%');
+			var cw = Math.max(hp/orig*100, 0) + '%';
+			el.css('width', cw);
+			if (hp <= 0)
+				levelLose();
 		};
 		var el = $("<div class='hp'>").css('background-color', col).appendTo(e.el);
 		updateHP(0);
@@ -655,7 +666,7 @@ function bossLevelLogic() {
 			levelTimeout(function() {
 				enemies.push(makeBossEnemy());
 				var e = lvTemp.boss;
-				lvTemp.upEHP = addHP(e, '#cc0000');
+				lvTemp.upEHP = addHP(e, '#cc0000', 50);
 				e.el.css('opacity', 0).animate({'opacity': 1}, 1000);
 				levelTimeout(function() {
 					blockMeMovement = false;
@@ -802,6 +813,13 @@ function logic() {
 						})();
 						return 2;
 					}
+					else if (e2.type === 'message' && !e2.own) {
+						(function() {
+							var e1_ = e1, e2_ = e2;
+							e1_.addLetter(e2_.tile, function() {}, 'S', 1e9, e2.stunDir);
+						})();
+						return 2;
+					}
 				}
 				else if (e2.type === 'me') return;
 
@@ -841,6 +859,11 @@ function logic() {
 							e2.letterQ.addFadeMsg("block", 'black');
 							return 1;
 						}
+					}
+					if (e2.type === 'mirror' && !e1.boss) {
+						e1.stunDir.x *= -1;
+						e1.Ydir[0] *= -1;
+						e1.own = false;
 					}
 				}
 			})();
@@ -959,7 +982,7 @@ var Levels = [
 			'#          #',
 			'#          #',
 			'#          #',
-			'S          #',
+			'S          M',
 			'#          #',
 			'#          #',
 			'#          #',
@@ -1021,6 +1044,10 @@ function loadLevel(lv) {
 				e.td = td;
 				e.needed = needed;
 				enemies.push(e);
+			}
+			else if (c === 'M') {
+				td.html("<span class='span-M'></span>");
+				enemies.push(makeMirrorEnemy(pos));
 			}
 			else if (c === 'T') {
 				var tile = lvi.special[spc++];
