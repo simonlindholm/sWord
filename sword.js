@@ -223,7 +223,7 @@ Enemy.prototype.addLetter = function(letter, done, type, min, stunDir, check, st
 			this.wallMove(stunDir.x, stunDir.y, false);
 			this.setPos();
 		}
-		var stunTime = (stunLonger ? 750 : 300);
+		var stunTime = (stunLonger ? 1250 : 300);
 		this.el.attr('data-stunned', 1);
 		this.stunned = true;
 		var prev = this.stunUntil, wasStunned = this.isStunned();
@@ -333,7 +333,7 @@ function makeMessageEnemy(midpos, tile, dir) {
 		this.pos.x += this.Ydir[1] * sp;
 		this.pos.y += this.Ydir[0] * sp;
 	});
-	e.Ydir = dir;
+	e.Ydir = [dir[0], dir[1]];
 	e.own = true;
 	e.pos.x -= e.hitbox.w/2;
 	e.pos.y -= e.hitbox.h/2;
@@ -682,7 +682,11 @@ function bossLevelLogic() {
 				var ar = [[2,3], [4,2], [7,2], [8,3],
 				          [2,5], [4,6], [7,6], [8,5]];
 				if (c >= ar.length) return;
-				var ch = Math.floor(Math.random() * 26);
+				var rLetters = [
+					0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25, // a-z
+					0,5,14,18 // aeos
+				];
+				var ch = rLetters[Math.floor(Math.random() * rLetters.length)];
 				for (;;) {
 					var a = ar[Math.floor(Math.random() * ar.length)];
 					if (enemies.some(function(e) {
@@ -697,10 +701,11 @@ function bossLevelLogic() {
 			levelTimeout(function() {
 				enemies.push(makeBossEnemy());
 				var e = lvTemp.boss;
-				lvTemp.upEHP = addHP(e, '#cc0000', 3);
+				lvTemp.upEHP = addHP(e, '#cc0000', 2);
 				lvTemp.bossDmg = function() {
 					e.stunUntil = 0;
 					++lvTemp.rage;
+					lvTemp.nextShot = Date.now() + 2500;
 					var left = lvTemp.upEHP(1);
 					if (!left) {
 						e.remove();
@@ -731,6 +736,7 @@ function bossLevelLogic() {
 	if (lvTemp.nextTiles && lvTemp.nextTiles <= Date.now()) {
 		lvTemp.addRandomTile();
 		lvTemp.addRandomTile();
+		lvTemp.addRandomTile();
 		lvTemp.nextTiles = 0;
 	}
 
@@ -739,7 +745,7 @@ function bossLevelLogic() {
 		lvTemp.shootingW = bossWords[bossWc++];
 		lvTemp.shootingI = 0;
 		bossWc %= bossWords.length;
-		lvTemp.nextShot = Date.now() + (bossWc%2 && lvTemp.rage ? 2000 : 4000);
+		lvTemp.nextShot = Date.now() + (bossWc%2 && lvTemp.rage ? 2000 : 5000);
 		lvTemp.nextTiles = Date.now() + 1000;
 	}
 }
@@ -904,10 +910,12 @@ function logic() {
 					if (e2.type === 'boss' && !e1.boss) {
 						(function() {
 							var e = e2;
-							if (!e1.purple && !e.isStunned())
+							if (!e1.purple && !e.isStunned()) {
+								e.letterQ.addFadeMsg("resist", 'black');
 								return;
+							}
 							var r = lvTemp.rage, needed =
-								(r === 0 ? 5 : r === 1 ? 7 : 9);
+								(r === 0 ? 3 : 6); // r === 1 ? 5 : 7);
 							var addStun = e.addLetter(e1.tile, function() {
 								lvTemp.bossDmg();
 							}, 'L', needed, e1.stunDir, false, true);
@@ -926,10 +934,13 @@ function logic() {
 							return 1;
 						}
 					}
-					if (e2.type === 'mirror' && !e1.boss) {
+					if (e2.type === 'mirror' && !e1.boss && !(e1.mirror && e1.bouncing())) {
 						e1.stunDir.x *= -1;
 						e1.Ydir[1] *= -1;
-						e1.mirror = true;
+						e1.bouncing = function() {
+							return (this.mirror === 'left' && this.pos.x > 400);
+						};
+						e1.mirror = 'left';
 						e1.own = false;
 						e1.purple = true;
 						e1.el.addClass('purple');
@@ -956,7 +967,7 @@ function logic() {
 		var m = enemies[i];
 		if (m.type !== 'message' || m.boss) continue;
 		var rect = m.getRect();
-		if (areaFail(rect) && !(m.mirror && !m.vert && rect.x > 400)) {
+		if (areaFail(rect) && !(m.mirror && m.bouncing())) {
 			m.remove();
 			enemies.splice(i, 1);
 			--i;
@@ -1050,9 +1061,9 @@ var Levels = [
 			'############',
 			'#          #',
 			'#          #',
-			'#          #',
+			'#          M',
 			'S          M',
-			'#          #',
+			'#          M',
 			'#          #',
 			'#          #',
 			'############'
@@ -1062,8 +1073,6 @@ var Levels = [
 		bossLevel: 1
 	}
 ];
-
-Levels[0] = Levels[4];
 
 function destroyLevel() {
 	enemies.forEach(function(e) {
