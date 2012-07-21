@@ -31,6 +31,26 @@ var pointsmap = [
 	3, 3, 4, 8, 8, 10
 ];
 
+var bossWords = [
+	"temporary", "whiplash", "damaging", "indirection", "clumpsyness",
+	"animosity", "querulousness", "assumption", "convertion",
+	"operands", "miraculous", "usefulness", "simplicity",
+	"fraternity", "territory", "groundbreaking", "explode",
+	"ruthlessly", "metamorphosis", "miniscule", "diaphanous",
+	"ebullience", "ephemeral", "eloquence", "penumbra",
+	"quintessential", "serendipity", "labyrinthine"
+], bossWc = 0;
+
+function shuffle(ar) {
+	var t0, t1, i, len = ar.length;
+	for (i = 0; i < len-1; ++i) {
+		var r = Math.floor(Math.random() * (len - i)) + i;
+		t0 = bossWords[r]; t1 = bossWords[i];
+		bossWords[r] = t1; bossWords[i] = t0;
+	}
+}
+shuffle(bossWords);
+
 for (var i = 0; i < 26; ++i) {
 	haveTiles.push(0);
 	chmap.push(String.fromCharCode(65 + i));
@@ -41,6 +61,13 @@ function sco(word) {
 	for (var i = 0; i < word.length; ++i)
 		sum += pointsmap[word.charCodeAt(i)-97];
 	return sum;
+}
+
+function preload() {
+	var ar = ["me0-1.png", "me01.png", "me-10.png", "me10.png", "me-orig.png", "me.png",
+	"small-def0.png", "small-def1.png", "small.png", "spikes.png"];
+	for (var i = 0; i < ar.length; ++i)
+		new Image().src = "img/" + ar[i];
 }
 
 function within(area, pos) {
@@ -86,14 +113,22 @@ LetterQ.prototype.add = function(letter, done, type, min, check) {
 	var word = this.word, totScore = this.score, remScore = 0;
 	if (type === 'W') {
 		if (!check) return;
+		if (!this.counter) this.counter = check;
+		--this.counter;
+		if (this.counter) return;
 		if (this.word.length === min.length) {
+			var self = this;
 			this.to = setTimeout(function() {
-				done(totScore);
+				self.word = ''; self.score = 0;
+				self.addFadeMsg(min, 'red');
+				self.ui.empty();
+				done();
 			});
 		}
 		else {
-			self.addFadeMsg("Invalid word", 'black');
-			self.ui.empty();
+			this.word = ''; this.score = 0;
+			this.addFadeMsg("Invalid word", 'black');
+			this.ui.empty();
 			return;
 		}
 		return;
@@ -295,7 +330,7 @@ function makeMessageEnemy(midpos, tile, dir) {
 	return e;
 }
 
-function makeBossMessageEnemy(midpos, tile, dir, islast, word) {
+function makeBossMessageEnemy(midpos, tile, dir, word) {
 	var lpos = {x: midpos.x, y: midpos.y};
 	var i = 1;
 	var e = new Enemy('message', {x:0, y:0}, function() {
@@ -306,7 +341,6 @@ function makeBossMessageEnemy(midpos, tile, dir, islast, word) {
 		this.pos.y = i*lpos.y + (1-i)*Me.pos.y;
 		i -= 0.03;
 	});
-	e.islast = islast;
 	e.boss = true;
 	e.word = word;
 	lpos.x -= e.hitbox.w/2;
@@ -597,13 +631,12 @@ function makeBossEnemy() {
 
 function bossLevelInit() {
 	myFacing = [0, 1];
-	lvTemp.wc = 0;
 	lvTemp.stage = 0;
 }
 
 function bossLevelLogic() {
-	function addHP(e, col) {
-		var orig = 30, hp = orig;
+	function addHP(e, col, orig) {
+		var hp = orig;
 		var updateHP = function(dmg) {
 			hp -= dmg;
 			el.css('width', (hp/orig*100) + '%');
@@ -617,7 +650,7 @@ function bossLevelLogic() {
 		if (Me.pos.x > TILEW*1.5) {
 			lvTemp.stage = 1;
 			blockMeMovement = true;
-			lvTemp.upMyHP = addHP(Me, '#0022ee');
+			lvTemp.upMyHP = addHP(Me, '#0022ee', 100);
 			addWall(0, 4, lvTemp.blockTd);
 			levelTimeout(function() {
 				enemies.push(makeBossEnemy());
@@ -634,20 +667,18 @@ function bossLevelLogic() {
 
 	if (lvTemp.shooting && lvTemp.shooting <= Date.now()) {
 		var ch = lvTemp.shootingW.charCodeAt(lvTemp.shootingI++) - 97;
-		var islast = (lvTemp.shootingI === lvTemp.shootingW.length);
-		enemies.push(makeBossMessageEnemy(lvTemp.boss.pos, ch, myFacing, islast, lvTemp.shootingW));
-		if (islast)
+		enemies.push(makeBossMessageEnemy(lvTemp.boss.pos, ch, myFacing, lvTemp.shootingW));
+		if (lvTemp.shootingI === lvTemp.shootingW.length)
 			lvTemp.shooting = 0;
 		else
 			lvTemp.shooting += 40;
 	}
 
 	if (lvTemp.nextShot <= Date.now()) {
-		var words = ["alfalfa", ];
 		lvTemp.shooting = Date.now();
-		lvTemp.shootingW = words[lvTemp.wc++];
+		lvTemp.shootingW = bossWords[bossWc++];
 		lvTemp.shootingI = 0;
-		lvTemp.wc %= words.length;
+		bossWc %= bossWords.length;
 		lvTemp.nextShot = Date.now() + 3000;
 	}
 }
@@ -744,7 +775,6 @@ function logic() {
 			var e2 = enemies[j];
 			if (e1 === e2 || !overlap(e1.getRect(), e2.getRect())) continue;
 			var rem = (function() {
-				// alert(e1.type + ' ' + e2.type);
 				if (e1.type === 'me') {
 					if (e2.type === 'tile') {
 						++haveTiles[e2.tile];
@@ -766,9 +796,9 @@ function logic() {
 					else if (e2.type === 'message' && e2.boss) {
 						(function() {
 							var e1_ = e1, e2_ = e2;
-							e1_.addLetter(e2_.tile, function(sc) {
-								lvTemp.upMyHP(sc);
-							}, 'W', e2_.word, null, e2_.islast);
+							e1_.addLetter(e2_.tile, function() {
+								lvTemp.upMyHP(30);
+							}, 'W', e2_.word, null, e2_.word.length);
 						})();
 						return 2;
 					}
@@ -832,7 +862,7 @@ function logic() {
 	// Messages
 	for (var i = 0; i < enemies.length; ++i) {
 		var m = enemies[i];
-		if (m.type !== 'message') continue;
+		if (m.type !== 'message' || m.boss) continue;
 		var rect = m.getRect();
 		if (areaFail(rect)) {
 			m.remove();
@@ -941,7 +971,7 @@ var Levels = [
 	}
 ];
 
-//Levels[0] = Levels[4];
+Levels[0] = Levels[4];
 
 function destroyLevel() {
 	enemies.forEach(function(e) {
@@ -1024,6 +1054,7 @@ function loadLevel(lv) {
 }
 
 $(function() {
+	preload();
 	fieldEl = $("#field");
 	overlayEl = $("#overlay");
 	renderloop();
