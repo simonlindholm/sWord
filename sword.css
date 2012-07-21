@@ -107,6 +107,9 @@ body {
 	margin-top: 1px;
 	z-index: 1;
 }
+.enemy-boss[data-stunned="1"] > img {
+	opacity: 0.4;
+}
 .enemy > img[data-facing="-10"] { /*up*/
 	margin-left: 2px;
 }
@@ -149,6 +152,9 @@ body {
 	text-align: center;
 	line-height: 26px;
 	font-family: sans-serif;
+}
+.enemy-message.purple {
+	background-color: purple;
 }
 .enemy-message {
 	height: 20px;

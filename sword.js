@@ -211,15 +211,26 @@ Enemy.prototype.setPos = function() {
 	});
 };
 
-Enemy.prototype.addLetter = function(letter, done, type, min, stunDir, check) {
+Enemy.prototype.isStunned = function() {
+	return (this.stunUntil > Date.now());
+};
+
+Enemy.prototype.addLetter = function(letter, done, type, min, stunDir, check, stunLonger) {
 	this.letterQ.add(letter, done, type, min, check);
 	if (stunDir) {
 		if (this.stunUntil + 140 <= Date.now()) {
 			this.wallMove(stunDir.x, stunDir.y, false);
 			this.wallMove(stunDir.x, stunDir.y, false);
+			this.setPos();
 		}
-		this.stunUntil = Date.now() + 300;
+		var stunTime = (stunLonger ? 750 : 300);
+		this.el.attr('data-stunned', 1);
+		this.stunned = true;
+		var prev = this.stunUntil, wasStunned = this.isStunned();
+		this.stunUntil = Date.now() + stunTime;
+		return (wasStunned ? this.stunUntil - prev : stunTime);
 	}
+	return 0;
 };
 
 Enemy.prototype.makeHolder = function() {
@@ -640,6 +651,7 @@ function makeBossEnemy() {
 function bossLevelInit() {
 	myFacing = [0, 1];
 	lvTemp.stage = 0;
+	lvTemp.rage = 0;
 }
 
 function bossLevelLogic() {
@@ -647,10 +659,12 @@ function bossLevelLogic() {
 		var hp = orig;
 		var updateHP = function(dmg) {
 			hp -= dmg;
-			var cw = Math.max(hp/orig*100, 0) + '%';
-			el.css('width', cw);
-			if (hp <= 0)
-				levelLose();
+			el.css('width', Math.max(hp/orig*100, 0) + '%');
+			if (hp <= 0) {
+				if (e === Me) levelLose();
+				else levelWin();
+			}
+			return hp;
 		};
 		var el = $("<div class='hp'>").css('background-color', col).appendTo(e.el);
 		updateHP(0);
@@ -663,13 +677,42 @@ function bossLevelLogic() {
 			blockMeMovement = true;
 			lvTemp.upMyHP = addHP(Me, '#0022ee', 100);
 			addWall(0, 4, lvTemp.blockTd);
+			lvTemp.addRandomTile = function() {
+				var c = enemies.filter(function(e) { return e.type === 'tile'; }).length;
+				var ar = [[2,3], [4,2], [7,2], [8,3],
+				          [2,5], [4,6], [7,6], [8,5]];
+				if (c >= ar.length) return;
+				var ch = Math.floor(Math.random() * 26);
+				for (;;) {
+					var a = ar[Math.floor(Math.random() * ar.length)];
+					if (enemies.some(function(e) {
+						return e.X === a[0] && e.Y === a[1];
+					})) continue;
+					var e = makeTileEnemy(tilePos(a[0], a[1]), ch);
+					e.X = a[0]; e.Y = a[1];
+					enemies.push(e);
+					break;
+				}
+			};
 			levelTimeout(function() {
 				enemies.push(makeBossEnemy());
 				var e = lvTemp.boss;
-				lvTemp.upEHP = addHP(e, '#cc0000', 50);
+				lvTemp.upEHP = addHP(e, '#cc0000', 3);
+				lvTemp.bossDmg = function() {
+					e.stunUntil = 0;
+					++lvTemp.rage;
+					var left = lvTemp.upEHP(1);
+					if (!left) {
+						e.remove();
+						var ind = enemies.indexOf(e);
+						enemies.splice(ind, 1);
+						levelWin();
+					}
+				};
 				e.el.css('opacity', 0).animate({'opacity': 1}, 1000);
 				levelTimeout(function() {
 					blockMeMovement = false;
+					lvTemp.nextTiles = Date.now();
 					lvTemp.nextShot = Date.now() + 2000;
 				}, 1000);
 			}, 600);
@@ -685,12 +728,19 @@ function bossLevelLogic() {
 			lvTemp.shooting += 40;
 	}
 
+	if (lvTemp.nextTiles && lvTemp.nextTiles <= Date.now()) {
+		lvTemp.addRandomTile();
+		lvTemp.addRandomTile();
+		lvTemp.nextTiles = 0;
+	}
+
 	if (lvTemp.nextShot <= Date.now()) {
 		lvTemp.shooting = Date.now();
 		lvTemp.shootingW = bossWords[bossWc++];
 		lvTemp.shootingI = 0;
 		bossWc %= bossWords.length;
-		lvTemp.nextShot = Date.now() + 3000;
+		lvTemp.nextShot = Date.now() + (bossWc%2 && lvTemp.rage ? 2000 : 4000);
+		lvTemp.nextTiles = Date.now() + 1000;
 	}
 }
 
@@ -775,7 +825,8 @@ function logic() {
 	var time = Date.now();
 	for (var i = 0; i < enemies.length; ++i) {
 		var e = enemies[i];
-		if (e.stunUntil <= time) {
+		if (!e.isStunned()) {
+			if (e.stunned) {e.el.attr('data-stunned', 0); e.stunned = false; }
 			e.move();
 			e.setPos();
 		}
@@ -850,6 +901,21 @@ function logic() {
 						})();
 						return 1;
 					}
+					if (e2.type === 'boss' && !e1.boss) {
+						(function() {
+							var e = e2;
+							if (!e1.purple && !e.isStunned())
+								return;
+							var r = lvTemp.rage, needed =
+								(r === 0 ? 5 : r === 1 ? 7 : 9);
+							var addStun = e.addLetter(e1.tile, function() {
+								lvTemp.bossDmg();
+							}, 'L', needed, e1.stunDir, false, true);
+							if (lvTemp.shooting) lvTemp.shooting += addStun;
+							lvTemp.nextShot += addStun;
+						})();
+						return 1;
+					}
 					if (e2.type === 'shield') {
 						if (e1.vert !== e2.vert) {
 							e2.letterQ.addFadeMsg("BAM", 'green');
@@ -862,8 +928,11 @@ function logic() {
 					}
 					if (e2.type === 'mirror' && !e1.boss) {
 						e1.stunDir.x *= -1;
-						e1.Ydir[0] *= -1;
+						e1.Ydir[1] *= -1;
+						e1.mirror = true;
 						e1.own = false;
+						e1.purple = true;
+						e1.el.addClass('purple');
 					}
 				}
 			})();
@@ -887,7 +956,7 @@ function logic() {
 		var m = enemies[i];
 		if (m.type !== 'message' || m.boss) continue;
 		var rect = m.getRect();
-		if (areaFail(rect)) {
+		if (areaFail(rect) && !(m.mirror && !m.vert && rect.x > 400)) {
 			m.remove();
 			enemies.splice(i, 1);
 			--i;
