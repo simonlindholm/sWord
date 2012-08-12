@@ -54,6 +54,31 @@ body {
 	display: none;
 	background: rgba(0, 0, 0, 0.5);
 }
+#covermsg.initial {
+	position: static;
+	padding-top: 220px;
+	background-color: #6E354A;
+	height: 391px;
+}
+#initial-header:before {
+	content: "shoot by pressing keys. enter restarts.";
+	font: 12px Arial;
+	left: 4px;
+	position: absolute;
+	top: 250px;
+}
+#initial-header::after {
+	content: "A Game of Words";
+	display: block;
+	font: 15px Arial;
+}
+#initial-header {
+	font: 35px Arial;
+	position: absolute;
+	text-align: center;
+	top: 125px;
+	width: 100%;
+}
 
 #inv .tileholder {
 	display: inline-block;

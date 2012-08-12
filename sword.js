@@ -526,7 +526,7 @@ function keyPress(e) {
 	}
 	else if (playState === 2) {
 		if (e.keyCode === 13) {
-			destroyLevel();
+			if (level !== -1) destroyLevel();
 			loadLevel(level+1===Levels.length ? 0 : level+1);
 		}
 	}
@@ -1084,6 +1084,7 @@ function destroyLevel() {
 }
 
 function loadLevel(lv) {
+	$("#covermsg").removeClass("initial");
 	overlayEl.empty();
 	blockMeMovement = false;
 	level = lv;
@@ -1164,6 +1165,9 @@ $(function() {
 	overlayEl = $("#overlay");
 	renderloop();
 	$(window).keypress(keyPress).keydown(keyDown).keyup(keyUp);
-	loadLevel(0);
+	//loadLevel(0);
+	level = -1;
+	playState = 2;
+	$("#covermsg").html("<div id='initial-header'>sWord</div>Press enter to begin.").show().addClass("initial");
 	setInterval(logic, 20);
 });
