@@ -41,6 +41,12 @@ var bossWords = [
 	"quintessential", "serendipity", "labyrinthine"
 ], bossWc = 0;
 
+function delayRemoveBeam(beam) {
+	levelTimeout(function() {
+		removeWall(beam.x, beam.y);
+	}, 2000);
+}
+
 function shuffle(ar) {
 	var t0, t1, i, len = ar.length;
 	for (i = 0; i < len-1; ++i) {
@@ -783,9 +789,8 @@ function spawnLevelLogic() {
 		else {
 			var beam = lvTemp.theBeam;
 			if (beam) {
-				// sound
 				delete lvTemp.theBeam;
-				removeWall(beam.x, beam.y, beam.td);
+				delayRemoveBeam(beam);
 			}
 		}
 	}
@@ -805,9 +810,8 @@ function SLogic() {
 		if (lvTemp.step === 3) {
 			var beam = lvTemp.theBeam;
 			if (beam) {
-				// sound
 				delete lvTemp.theBeam;
-				removeWall(beam.x, beam.y);
+				delayRemoveBeam(beam);
 			}
 		}
 	}
