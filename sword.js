@@ -24,6 +24,7 @@ var signAreas = null;
 var wordsUsed = null;
 var enemies = null;
 var lvTemp = {};
+var Sound;
 
 var pointsmap = [
 	1, 3, 4, 1, 1, 4, 3, 2, 1, 10, //j
@@ -41,7 +42,46 @@ var bossWords = [
 	"quintessential", "serendipity", "labyrinthine"
 ], bossWc = 0;
 
+var inactiveAudio = [];
+function lessSound() {
+	if (inactiveAudio.length >= 3) {
+		for (var i = 2; i < inactiveAudio.length; ++i) {
+			var a = inactiveAudio[i];
+			Sound.removeChild(a);
+		}
+		inactiveAudio.splice(2);
+	}
+}
+function playSound(name) {
+	var a;
+	if (inactiveAudio.length) {
+		a = inactiveAudio[inactiveAudio.length-1];
+		inactiveAudio.pop();
+	}
+	else {
+		a = new Audio();
+		a.onloadeddata = function() {
+			a.play();
+			a.onended = function() {
+				a.pause();
+				inactiveAudio.push(a);
+			};
+		};
+		Sound.appendChild(a);
+	}
+	a.src = "noise/" + name + ".ogg";
+	a.load();
+}
+var longAudio = new Audio();
+function playLong(name) {
+	longAudio.src = "noise/" + name + ".ogg";
+	longAudio.load();
+	longAudio.play();
+}
 function delayRemoveBeam(beam) {
+	levelTimeout(function() {
+		playSound("beam-remove");
+	}, 1700);
 	levelTimeout(function() {
 		removeWall(beam.x, beam.y);
 	}, 2000);
@@ -74,6 +114,10 @@ function preload() {
 	"small-def0.png", "small-def1.png", "small.png", "spikes.png"];
 	for (var i = 0; i < ar.length; ++i)
 		new Image().src = "img/" + ar[i];
+
+	ar = ["shoot1", "explode", "beware", "beam-remove"];
+	for (var i = 0; i < ar.length; ++i)
+		new Image().src = "noise/" + ar[i] + ".ogg";
 }
 
 function within(area, pos) {
@@ -487,6 +531,7 @@ function renderloop() {
 }
 
 function shootTile(ch) {
+	playSound("shoot1");
 	--haveTiles[ch];
 	renderTiles();
 	var pos = {x: Me.pos.x+Me.hitbox.w/2, y: Me.pos.y+Me.hitbox.h/2};
@@ -591,6 +636,7 @@ function keyUp(e) {
 }
 
 function levelWin() {
+	longAudio.pause();
 	playState = 2;
 	var msg = "Level complete!<br>Press ENTER to continue.";
 	if (level+1 === Levels.length) {
@@ -599,7 +645,9 @@ function levelWin() {
 	$("#covermsg").html(msg).show();
 }
 
-function levelLose() {
+function levelLose(sound) {
+	if (sound) playLong(sound);
+	else longAudio.pause();
 	playState = 1;
 	var msg = "You died!<br>Press ENTER to retry.";
 	$("#covermsg").html(msg).show();
@@ -857,7 +905,11 @@ function logic() {
 						levelWin();
 						return;
 					}
-					else if (e2.type === 'small' || e2.type === 'shield' || e2.type === 'boss') {
+					else if (e2.type === 'small' || e2.type === 'shield') {
+						levelLose("beware");
+						return 1;
+					}
+					else if (e2.type === 'boss') {
 						levelLose();
 						return 1;
 					}
@@ -890,7 +942,8 @@ function logic() {
 						(function() {
 							var e = e2;
 							e.addLetter(e1.tile, function() {
-								removeWall(e.tx, e.ty, e.td);
+								playSound("explode");
+								removeWall(e.tx, e.ty);
 								var ind = enemies.indexOf(e);
 								if (ind === -1) alert("fail");
 								e.remove();
@@ -904,6 +957,7 @@ function logic() {
 						(function() {
 							var e = e2;
 							e.addLetter(e1.tile, function() {
+								playSound("explode");
 								var ind = enemies.indexOf(e);
 								e.remove();
 								enemies.splice(ind, 1);
@@ -930,6 +984,7 @@ function logic() {
 					}
 					if (e2.type === 'shield') {
 						if (e1.vert !== e2.vert) {
+							playSound("explode");
 							e2.letterQ.addFadeMsg("BAM", 'green');
 							return 3;
 						}
@@ -1089,6 +1144,7 @@ function destroyLevel() {
 
 function loadLevel(lv) {
 	$("#covermsg").removeClass("initial");
+	lessSound();
 	overlayEl.empty();
 	blockMeMovement = false;
 	level = lv;
@@ -1167,6 +1223,7 @@ $(function() {
 	preload();
 	fieldEl = $("#field");
 	overlayEl = $("#overlay");
+	Sound = document.getElementById("sound");
 	renderloop();
 	$(window).keypress(keyPress).keydown(keyDown).keyup(keyUp);
 	//loadLevel(0);

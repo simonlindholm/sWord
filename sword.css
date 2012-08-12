@@ -38,6 +38,7 @@ body {
 	/*top: 400px;*/
 	margin: 17px 0 0 1px;
 }
+#sound { display: none; }
 #covermsg {
 	position: absolute;
 	top: 0;
