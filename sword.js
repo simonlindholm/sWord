@@ -1,4 +1,4 @@
-// "sound" as comment
+// Sound: boss, spikes, win
 
 var W = 500;
 var H = 400;
@@ -72,8 +72,11 @@ function playSound(name) {
 	a.src = "noise/" + name + ".ogg";
 	a.load();
 }
+var longPlayed = {};
 var longAudio = new Audio();
 function playLong(name) {
+	if (name in longPlayed) return;
+	longPlayed[name] = 1;
 	longAudio.src = "noise/" + name + ".ogg";
 	longAudio.load();
 	longAudio.play();
@@ -149,7 +152,6 @@ LetterQ.prototype.clearTO = function() {
 	this.to = null;
 };
 LetterQ.prototype.add = function(letter, done, type, min, check) {
-	// sound
 	var Sc = (type === 'S');
 	this.clearTO();
 	if (!min) {
@@ -521,15 +523,6 @@ function renderTiles() {
 	$("#inv").html(html);
 }
 
-function render() {
-	// TODO move messages etc.
-}
-
-function renderloop() {
-	render();
-	// window.mozRequestAnimationFrame = renderloop;
-}
-
 function shootTile(ch) {
 	playSound("shoot1");
 	--haveTiles[ch];
@@ -578,7 +571,12 @@ function keyPress(e) {
 	else if (playState === 2) {
 		if (e.keyCode === 13) {
 			if (level !== -1) destroyLevel();
-			loadLevel(level+1===Levels.length ? 0 : level+1);
+			if (level+1 === Levels.length) {
+				longPlayed = {};
+				loadLevel(0);
+			}
+			else
+				loadLevel(level+1);
 		}
 	}
 }
@@ -826,6 +824,8 @@ function spawnLevelLogic() {
 			addEnemies[lvTemp.stage].forEach(function(a) {
 				enemies.push(makeOutEnemy(tilePos(a[0], a[1]), a[2], a[3]));
 			});
+			if (lvTemp.stage === 3)
+				levelTimeout(function() { playSound("arecording"); }, 1000);
 			++lvTemp.stage;
 		}
 		else if (lvTemp.stage in addTiles) {
@@ -1060,6 +1060,7 @@ var Levels = [
 			'#     # T T#',
 			'#     #    #'
 		],
+		introSound: "welcome",
 		special: ['T', 'L', 'U', 'N', 'I', 'Y', 5, 'T', 'P', 'E', 'S', 5,
 		'S', 'E', 'I', 7, 'D', 'C', 'N', 'I']
 	},
@@ -1075,6 +1076,7 @@ var Levels = [
 			'  ^^^^^^ ^##',
 			'    3    ^##',
 		],
+		introSound: "baaaah-losblobos",
 		special: ['Z', 'Z', 6, 'E', 'D', 'K', 'S', 'C', 'R', 'U', 'E',
 		'W', 'E', 'S', 'Q', true, 3, 5, false, 3, 6]
 	},
@@ -1091,6 +1093,7 @@ var Levels = [
 			'#-# 0       ',
 			'#E# #       ',
 		],
+		introSound: "level3",
 		special: ['Q', 'U', 'E', 'S', 'T', 3, 'E', 'U', 'Z', 'E', 'S', 'T',
 		'E', 'E', 'E', 'E', 'E', 6, 3],
 		init: SInit,
@@ -1110,6 +1113,7 @@ var Levels = [
 			'#        #  ',
 			'## #### ##  ',
 		],
+		introSound: "nextlevel",
 		special: ['R', 'C', 'A', 'E', 'T', 'R'],
 		logic: spawnLevelLogic,
 		init: spawnLevelInit,
@@ -1217,6 +1221,7 @@ function loadLevel(lv) {
 	enemies.push(me);
 	Me = me;
 	renderTiles();
+	if (lvi.introSound) playLong(lvi.introSound);
 }
 
 $(function() {
@@ -1224,7 +1229,6 @@ $(function() {
 	fieldEl = $("#field");
 	overlayEl = $("#overlay");
 	Sound = document.getElementById("sound");
-	renderloop();
 	$(window).keypress(keyPress).keydown(keyDown).keyup(keyUp);
 	//loadLevel(0);
 	level = -1;
