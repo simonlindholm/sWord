@@ -81,6 +81,12 @@ function playLong(name) {
 	longAudio.load();
 	longAudio.play();
 }
+var laughAudio = new Audio();
+function playLaugh(name) {
+	laughAudio.src = "noise/" + name + ".ogg";
+	laughAudio.load();
+	laughAudio.play();
+}
 function delayRemoveBeam(beam) {
 	levelTimeout(function() {
 		playSound("beam-remove");
@@ -118,7 +124,8 @@ function preload() {
 	for (var i = 0; i < ar.length; ++i)
 		new Image().src = "img/" + ar[i];
 
-	ar = ["shoot1", "explode", "beware", "beam-remove"];
+	ar = ["welcome", "shoot1", "explode", "beware", "beam-remove", "baaaah-losblobos",
+	"arecording", "level3", "nextlevel", "shoot2", "siseblabla", "jejejejeje"];
 	for (var i = 0; i < ar.length; ++i)
 		new Image().src = "noise/" + ar[i] + ".ogg";
 }
@@ -643,9 +650,8 @@ function levelWin() {
 	$("#covermsg").html(msg).show();
 }
 
-function levelLose(sound) {
-	if (sound) playLong(sound);
-	else longAudio.pause();
+function levelLose() {
+	longAudio.pause();
 	playState = 1;
 	var msg = "You died!<br>Press ENTER to retry.";
 	$("#covermsg").html(msg).show();
@@ -713,8 +719,13 @@ function bossLevelLogic() {
 			hp -= dmg;
 			el.css('width', Math.max(hp/orig*100, 0) + '%');
 			if (hp <= 0) {
-				if (e === Me) levelLose();
-				else levelWin();
+				if (e === Me) {
+					playLaugh("jejejejeje");
+					levelLose();
+				}
+				else {
+					levelWin();
+				}
 			}
 			return hp;
 		};
@@ -777,6 +788,7 @@ function bossLevelLogic() {
 	}
 
 	if (lvTemp.shooting && lvTemp.shooting <= Date.now()) {
+		playSound("shoot2");
 		var ch = lvTemp.shootingW.charCodeAt(lvTemp.shootingI++) - 97;
 		enemies.push(makeBossMessageEnemy(lvTemp.boss.pos, ch, myFacing, lvTemp.shootingW));
 		if (lvTemp.shootingI === lvTemp.shootingW.length)
@@ -906,10 +918,12 @@ function logic() {
 						return;
 					}
 					else if (e2.type === 'small' || e2.type === 'shield') {
-						levelLose("beware");
+						playSound("beware");
+						levelLose();
 						return 1;
 					}
 					else if (e2.type === 'boss') {
+						playLaugh("siseblabla");
 						levelLose();
 						return 1;
 					}
@@ -994,6 +1008,7 @@ function logic() {
 						}
 					}
 					if (e2.type === 'mirror' && !e1.boss && !(e1.mirror && e1.bouncing())) {
+						playSound("shoot1");
 						e1.stunDir.x *= -1;
 						e1.Ydir[1] *= -1;
 						e1.bouncing = function() {
