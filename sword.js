@@ -1240,7 +1240,7 @@ function loadLevel(lv) {
 	enemies.push(me);
 	Me = me;
 	renderTiles();
-	if (lvi.introSound) playLong(lvi.introSound);
+	if (lvi.introSound) playLong("intro/" + lvi.introSound);
 }
 
 $(function() {
