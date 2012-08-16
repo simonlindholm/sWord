@@ -1,4 +1,4 @@
-// Sound: boss, level won
+// boss sounds: intro, damage?, middle defeated (hahaha etc.; "you're really trying, vladimir")
 
 var W = 500;
 var H = 400;
@@ -642,10 +642,15 @@ function keyUp(e) {
 
 function levelWin() {
 	longAudio.pause();
+	if (Lvi.winSound) playLaugh("win/" + Lvi.winSound);
 	playState = 2;
 	var msg = "Level complete!<br>Press ENTER to continue.";
 	if (level+1 === Levels.length) {
 		msg = "Game complete!";
+		setTimeout(function() {
+			msg += "<br><br>Press ENTER to play again.";
+			$("#covermsg").html(msg);
+		}, 4500);
 	}
 	$("#covermsg").html(msg).show();
 }
@@ -718,17 +723,15 @@ function bossLevelLogic() {
 		var updateHP = function(dmg) {
 			hp -= dmg;
 			el.css('width', Math.max(hp/orig*100, 0) + '%');
+			if (e !== Me && hp !== orig) {
+				// laughAudio.pause();
+				playSound("explode");
+			}
 			if (hp <= 0) {
 				if (e === Me) {
 					playLaugh("jejejejeje");
 					levelLose();
 				}
-				else {
-					levelWin();
-				}
-			}
-			else if (e !== Me && hp !== orig) {
-				playLaugh("explode");
 			}
 			return hp;
 		};
@@ -773,7 +776,7 @@ function bossLevelLogic() {
 					++lvTemp.rage;
 					lvTemp.nextShot = Date.now() + 2500;
 					var left = lvTemp.upEHP(1);
-					if (!left) {
+					if (left <= 0) {
 						e.remove();
 						var ind = enemies.indexOf(e);
 						enemies.splice(ind, 1);
@@ -1080,6 +1083,7 @@ var Levels = [
 			'#     #    #'
 		],
 		introSound: "welcome",
+		winSound: "yay",
 		special: ['T', 'L', 'U', 'N', 'I', 'Y', 5, 'T', 'P', 'E', 'S', 5,
 		'S', 'E', 'I', 7, 'D', 'C', 'N', 'I']
 	},
@@ -1096,6 +1100,7 @@ var Levels = [
 			'    3    ^##',
 		],
 		introSound: "baaaah-losblobos",
+		winSound: "kaching",
 		special: ['Z', 'Z', 6, 'E', 'D', 'K', 'S', 'C', 'R', 'U', 'E',
 		'W', 'E', 'S', 'Q', true, 3, 5, false, 3, 6]
 	},
@@ -1113,6 +1118,7 @@ var Levels = [
 			'#E# #       ',
 		],
 		introSound: "level3",
+		winSound: "inspelning38",
 		special: ['Q', 'U', 'E', 'S', 'T', 3, 'E', 'U', 'Z', 'E', 'S', 'T',
 		'E', 'E', 'E', 'E', 'E', 6, 3],
 		init: SInit,
@@ -1133,6 +1139,7 @@ var Levels = [
 			'## #### ##  ',
 		],
 		introSound: "nextlevel",
+		winSound: "woohoo",
 		special: ['R', 'C', 'A', 'E', 'T', 'R'],
 		logic: spawnLevelLogic,
 		init: spawnLevelInit,
@@ -1150,6 +1157,7 @@ var Levels = [
 			'#          #',
 			'############'
 		],
+		winSound: "yipikaye",
 		logic: bossLevelLogic,
 		init: bossLevelInit,
 		bossLevel: 1
