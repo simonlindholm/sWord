@@ -1,4 +1,4 @@
-// Sound: boss, spikes, win
+// Sound: boss, level won
 
 var W = 500;
 var H = 400;
@@ -125,7 +125,7 @@ function preload() {
 		new Image().src = "img/" + ar[i];
 
 	ar = ["welcome", "shoot1", "explode", "beware", "beam-remove", "baaaah-losblobos",
-	"arecording", "level3", "nextlevel", "shoot2", "siseblabla", "jejejejeje"];
+	"arecording", "level3", "nextlevel", "shoot2", "siseblabla", "jejejejeje", "spikes"];
 	for (var i = 0; i < ar.length; ++i)
 		new Image().src = "noise/" + ar[i] + ".ogg";
 }
@@ -727,6 +727,9 @@ function bossLevelLogic() {
 					levelWin();
 				}
 			}
+			else if (e !== Me && hp !== orig) {
+				playLaugh("explode");
+			}
 			return hp;
 		};
 		var el = $("<div class='hp'>").css('background-color', col).appendTo(e.el);
@@ -928,6 +931,7 @@ function logic() {
 						return 1;
 					}
 					else if (e2.type === 'spikes') {
+						playSound("spikes");
 						levelLose();
 						return 1;
 					}
