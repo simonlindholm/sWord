@@ -1,4 +1,4 @@
-// boss sounds: intro, damage?, middle defeated (hahaha etc.; "you're really trying, vladimir")
+// boss sounds: player damage?, middle defeated (hahaha etc.; "you're really trying, vladimir")
 
 var W = 500;
 var H = 400;
@@ -119,15 +119,22 @@ function sco(word) {
 }
 
 function preload() {
-	var ar = ["me0-1.png", "me01.png", "me-10.png", "me10.png", "me-orig.png", "me.png",
-	"small-def0.png", "small-def1.png", "small.png", "spikes.png"];
-	for (var i = 0; i < ar.length; ++i)
-		new Image().src = "img/" + ar[i];
+	function p(pre, post, ar) {
+		for (var i = 0; i < ar.length; ++i)
+			new Image().src = pre + ar[i] + post;
+	}
 
-	ar = ["welcome", "shoot1", "explode", "beware", "beam-remove", "baaaah-losblobos",
-	"arecording", "level3", "nextlevel", "shoot2", "siseblabla", "jejejejeje", "spikes"];
-	for (var i = 0; i < ar.length; ++i)
-		new Image().src = "noise/" + ar[i] + ".ogg";
+	p("img/", ".png", ["me0-1", "me01", "me-10", "me10", "me-orig", "me",
+		"small-def0", "small-def1", "small", "spikes"]);
+
+	p("noise/", ".ogg", ["shoot1", "explode", "beware", "beam-remove",
+		"arecording", "shoot2", "siseblabla", "jejejejeje", "spikes"]);
+
+	p("noise/intro/", ".ogg", ["welcome", "level3", "nextlevel",
+		"baaaah-losblobos", "cheesy"]);
+
+	p("noise/win/", ".ogg", ["yay", "woohoo", "kaching", "inspelning38",
+		"yipikaye"]);
 }
 
 function within(area, pos) {
@@ -767,7 +774,7 @@ function bossLevelLogic() {
 					break;
 				}
 			};
-			levelTimeout(function() {
+			var spawnBoss = function() {
 				enemies.push(makeBossEnemy());
 				var e = lvTemp.boss;
 				lvTemp.upEHP = addHP(e, '#cc0000', 2);
@@ -789,7 +796,16 @@ function bossLevelLogic() {
 					lvTemp.nextTiles = Date.now();
 					lvTemp.nextShot = Date.now() + 2000;
 				}, 1000);
-			}, 600);
+			};
+			if ("intro/cheesy" in longPlayed) {
+				levelTimeout(spawnBoss, 400);
+			}
+			else {
+				levelTimeout(spawnBoss, 1700);
+				levelTimeout(function() {
+					playLong("intro/cheesy");
+				}, 100);
+			}
 		}
 	}
 
