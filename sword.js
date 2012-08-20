@@ -1,4 +1,4 @@
-// boss sounds: player damage?, middle defeated (hahaha etc.; "you're really trying, vladimir")
+// here be dragons
 
 var W = 500;
 var H = 400;
@@ -128,7 +128,8 @@ function preload() {
 		"small-def0", "small-def1", "small", "spikes"]);
 
 	p("noise/", ".ogg", ["shoot1", "explode", "beware", "beam-remove",
-		"arecording", "shoot2", "siseblabla", "jejejejeje", "spikes"]);
+		"arecording", "shoot2", "siseblabla", "jejejejeje", "spikes",
+		"haha", "reallytrying"]);
 
 	p("noise/intro/", ".ogg", ["welcome", "level3", "nextlevel",
 		"baaaah-losblobos", "cheesy"]);
@@ -788,6 +789,12 @@ function bossLevelLogic() {
 						var ind = enemies.indexOf(e);
 						enemies.splice(ind, 1);
 						levelWin();
+					}
+					else {
+						playLaugh("reallytrying");
+						levelTimeout(function() {
+							playLaugh("haha");
+						}, 5000);
 					}
 				};
 				e.el.css('opacity', 0).animate({'opacity': 1}, 1000);
