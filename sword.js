@@ -118,10 +118,21 @@ function sco(word) {
 	return sum;
 }
 
+resources = {};
 function preload() {
 	function p(pre, post, ar) {
-		for (var i = 0; i < ar.length; ++i)
-			new Image().src = pre + ar[i] + post;
+		for (var i = 0; i < ar.length; ++i) {
+			var a, url = pre + ar[i] + post;
+			if (post == ".png") {
+				a = new Image;
+				a.src = url;
+			}
+			else {
+				a = new Audio(url);
+				a.load();
+			}
+			resources[url] = a;
+		}
 	}
 
 	p("img/", ".png", ["me0-1", "me01", "me-10", "me10", "me-orig", "me",
